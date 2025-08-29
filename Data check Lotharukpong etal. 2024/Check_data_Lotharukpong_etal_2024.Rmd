@@ -1,0 +1,169 @@
+---
+title: "Check data from Lotharukpong et al., 2024"
+author: "Asif Ahmed Sami"
+date: "2025-08-29"
+output: html_document
+---
+
+# This script performs checks on the RNA-seq datasets used in the Lotharukpong et. al., 2024 paper (https://www.nature.com/articles/s41586-024-08059-8). The checks performed include generating the Cullen-Frey plot using the FlatLineTest, checking stability of the reductive hourglass test after different data transformations, etc. The counts data f were downloaded from their GitHub page at  - [Link text](https://github.com/LotharukpongJS/hourglass_brownalga/tree/main/data). 
+
+
+## Load necessary libraries
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# set working directory
+wd = "C:/Users/sami001/OneDrive - Wageningen University & Research/TAI_tpc/Resubmission_v.2 TPC/hourglass_brownalgae"
+
+knitr::opts_knit$set(root.dir = normalizePath(wd))
+
+
+# load myTAI
+library(myTAI)
+library(tidyverse)
+library(viridis)
+library(tximport)
+library(DESeq2)
+library(scales)
+library(noisyr)
+
+
+# load data
+load(file = "data_hourglass_brownalgae.Rdata")
+
+```
+
+## Load data Ficus distichus
+
+Load non-transformed TPM, log2, and rlog transformed count data for F. distichus. Then perform FlatLineTest to generate Cullen-Frey plots. Also check the stability of the pattern to different data transformations.
+
+```{r Fdis, fig.height=8, fig.width=12}
+
+# load  Ficus distichus data
+# Fd_PES <- read.csv("Fd_PES.csv", check.names = FALSE)
+# Fd_PES_log2 <- read.csv("Fd_PES.log2.csv", check.names = FALSE)
+# Fd_PES_rlog <- read.csv("Fd_PES.rlog.csv", check.names = FALSE)
+
+# TPM count
+print("Cullen-Frey plot for TPM count")
+FlatLineTest(
+  Fd_PES,
+  permutations = 20000,
+  plotHistogram = T,
+  runs = 5)
+
+# log2 transformation
+print("Cullen-Frey plot for log2(TPM)")
+FlatLineTest(
+  Fd_PES_log2,
+  permutations = 20000,
+  plotHistogram = T,
+  runs = 5)
+
+# rlog transformation
+print("Cullen-Frey plot for rlog(TPM)")
+FlatLineTest(
+  Fd_PES_rlog,
+  permutations = 20000,
+  plotHistogram = T,
+  runs = 5)
+
+
+# Check stability of Reductive hourglass test to different data transformations
+ReductiveHourglassTest(
+  dplyr::select(Fd_PES, !c(gamete, matSP)),
+  permutations = 20000,
+  modules = list(early = 1:4, mid = 5, late = 6),
+  plotHistogram = TRUE,
+  runs = 5,
+  parallel = FALSE,
+  lillie.test	= TRUE,
+  custom.perm.matrix = NULL
+)
+
+# check stability under different data transformations
+tfStability(dplyr::select(Fd_PES, !c(gamete, matSP)),
+            TestStatistic = "ReductiveHourglassTest",
+            transforms = c("none", "sqrt", "log2", "rank", "squared"),
+            modules = list(early = 1:4, mid = 5, late = 6),
+            permutations = 500,
+            pseudocount = 1)
+
+```
+
+
+## Load data Ficus serratus
+
+Load non-transformed TPM, log2, and rlog transformed count data for F. serratus. Then perform FlatLineTest to generate Cullen-Frey plots. Also check the stability of the pattern to different data transformations.
+
+```{r Fser, fig.height=8, fig.width=12}
+
+# load  Ficus serratus data
+# Fs_PES <- read.csv("Fs_PES.csv", check.names = FALSE)
+# Fs_PES_log2 <- read.csv("Fs_PES.log2.csv", check.names = FALSE)
+# Fs_PES_rlog <- read.csv("Fs_PES.rlog.csv", check.names = FALSE)
+
+
+# TPM count
+print("Cullen-Frey plot for TPM count")
+FlatLineTest(
+  Fs_PES,
+  permutations = 20000,
+  plotHistogram = T,
+  runs = 5)
+
+# log2 transformation
+print("Cullen-Frey plot for log2(TPM)")
+FlatLineTest(
+  Fs_PES_log2,
+  permutations = 20000,
+  plotHistogram = T,
+  runs = 5)
+
+# rlog transformation
+print("Cullen-Frey plot for rlog(TPM)")
+FlatLineTest(
+  Fs_PES_rlog,
+  permutations = 20000,
+  plotHistogram = T,
+  runs = 5)
+
+
+# Check stability of Reductive hourglass test to different data transformations
+ReductiveHourglassTest(
+  dplyr::select(Fs_PES, !c(gamete, matSP)),
+  permutations = 20000,
+  modules = list(early = 1:4, mid = 5, late = 6),
+  plotHistogram = TRUE,
+  runs = 5,
+  parallel = FALSE,
+  lillie.test	= TRUE,
+  custom.perm.matrix = NULL
+)
+
+# check stability under different data transformations
+tfStability(dplyr::select(Fs_PES, !c(gamete, matSP)),
+            TestStatistic = "ReductiveHourglassTest",
+            transforms = c("none", "sqrt", "log2", "rank", "squared"),
+            modules = list(early = 1:2, mid = 3:4, late = 5),
+            permutations = 500,
+            pseudocount = 1)
+
+```
+
+
+
+## Save all the RNA-seq data
+
+```{r}
+# save(Fd_PES, Fd_PES_log2, Fd_PES_rlog, Fs_PES, Fs_PES_log2, Fs_PES_rlog, file = "data_hourglass_brownalgae.Rdata")
+
+```
+
+
+
+
+
+
+
