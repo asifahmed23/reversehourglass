@@ -48,6 +48,25 @@ tfStability(ath_expr,
             permutations = 50000,
             pseudocount = 1)
 
+# Check the Cullen-Frey plot for FlatLineTest and ReverseHourglassTest
+FlatLineTest(
+  ath_expr,
+  permutations = 50000,
+  plotHistogram = T,
+  runs = 5)
+
+ReverseHourglassTest(
+  ath_expr,
+  permutations = 50000,
+  modules = list(early = 1:7, mid = 8:17, late = 18:21),
+  plotHistogram = TRUE,
+  runs = 5,
+  parallel = FALSE,
+  lillie.test	= TRUE,
+  custom.perm.matrix = NULL
+)
+
+
 
 # Plot relative expression of genes
 PlotRE(ath_expr, Groups = list(1:4, 5:10),adjust.range = FALSE)
@@ -165,3 +184,4 @@ PlotSignature( ExpressionSet = zma_expr,
 
 # Plot the individual phylostrata contribution
 PlotContribution(zma_expr,  legendName = "PS")
+
