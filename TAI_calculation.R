@@ -54,7 +54,6 @@ FlatLineTest(
   permutations = 50000,
   plotHistogram = T,
   runs = 5)
-
 ReverseHourglassTest(
   ath_expr,
   permutations = 50000,
@@ -184,4 +183,5 @@ PlotSignature( ExpressionSet = zma_expr,
 
 # Plot the individual phylostrata contribution
 PlotContribution(zma_expr,  legendName = "PS")
+
 
