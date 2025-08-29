@@ -134,7 +134,7 @@ FlatLineTest(
 ReductiveHourglassTest(
   dplyr::select(Fs_PES, !c(gamete, matSP)),
   permutations = 20000,
-  modules = list(early = 1:4, mid = 5, late = 6),
+  modules = list(early = 1:2, mid = 3:4, late = 5),
   plotHistogram = TRUE,
   runs = 5,
   parallel = FALSE,
@@ -160,6 +160,7 @@ tfStability(dplyr::select(Fs_PES, !c(gamete, matSP)),
 # save(Fd_PES, Fd_PES_log2, Fd_PES_rlog, Fs_PES, Fs_PES_log2, Fs_PES_rlog, file = "data_hourglass_brownalgae.Rdata")
 
 ```
+
 
 
 
