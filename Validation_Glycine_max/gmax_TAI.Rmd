@@ -1,0 +1,222 @@
+---
+title: "Gmax_TAI_validation"
+author: "Asif Ahmed Sami"
+date: "2025-08-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# set working directory
+wd = "C:/Users/sami001/OneDrive - Wageningen University & Research/TAI_tpc/Resubmission_v.2 TPC/script Gmax/Validation_Glycine_max"
+
+knitr::opts_knit$set(root.dir = normalizePath(wd))
+
+
+# load myTAI
+library(myTAI)
+library(tidyverse)
+library(viridis)
+library(tximport)
+library(DESeq2)
+library(scales)
+library(noisyr)
+
+
+```
+
+## Load data
+
+Load the RNA-seq data from Chen et al., 2024 (https://www.maxapress.com/article/id/675137defa6c5848635e86a1). The reads were processed using nextflow/rnaseq pipeline and the output file contain the TPM counts were used. TPM counts were averaged across replicates and combined with the phylostata information (generated with GenEra) to generate the below data.
+
+```{r data}
+
+# load data from MNodine and Renake
+load(file = "Gmax_TAI.Rdata")
+
+
+```
+
+## TAI profile using TPM count data
+
+These analysis were performed on the average TPM counts for each developmental stage with any additional data transformations.
+
+```{r TAI, fig.height=6, fig.width=9, results='hide'}
+
+# get the TAI value for each sample
+TAI(tpmCountAvgGm)
+
+# check statistics for reverse hourglass test for TPM counts without any transformation
+
+# Cullen-Frey plot using FlatLineTest
+FlatLineTest(
+  tpmCountAvgGm,
+  permutations = 20000,
+  plotHistogram = TRUE,
+  runs = 5,
+  parallel = FALSE,
+  custom.perm.matrix = NULL
+)
+
+# Reverse hourglass test
+ReverseHourglassTest(
+  tpmCountAvgGm,
+  permutations = 20000,
+  modules = list(early = 1:2, mid = 3:6, late = 7:9),
+  plotHistogram = TRUE,
+  runs = 5,
+  parallel = FALSE,
+  lillie.test	= TRUE,
+  custom.perm.matrix = NULL
+)
+
+
+# Visualize the TAI profile along with the reverse hourglass test
+PlotSignature( ExpressionSet = tpmCountAvgGm, 
+               p.value       = TRUE, permutations = 50000, TestStatistic = "ReverseHourglassTest",
+               modules = list(early = 1:2, mid = 3:6, late = 7:9),
+               ylab = "Transcriptome age index (TAI)\n",
+               xlab = "\nOntogeny") +
+              theme_bw()+
+              theme(
+                legend.position = "none",
+                strip.text = element_text(size = 14),
+                axis.text.x = element_text(size = 14, angle = 45, hjust=1, color = "black"), 
+                axis.text.y = element_text(size = 14, color = "black"),
+                axis.title.x = element_text(size = 16), # set x-axis label size
+                axis.title.y = element_text(size = 16), # set y-axis label size
+                legend.text = element_text(size = 14),
+                legend.title = element_text(size = 16),
+                panel.grid.major = element_blank(), 
+                panel.grid.minor = element_blank()
+              )
+
+
+```
+## Cullen-Frey plot
+
+Generate Cullen-Frey plot for different data transformations (log2, vst, and rank) using the FlatLineTest. For all transformations, the empirical data lies close to the Gamma distribution. 
+
+
+```{r Cullen-Frey, results='hide'}
+
+# log2 transformation of TPM counts with a pseudo count of 1--------------------
+tpmCountAvgGm_log2 <- myTAI::tf(
+                      tpmCountAvgGm,
+                      FUN = log2, 
+                      pseudocount = 1)
+
+# Cullen-Frey plot for log2 transformation
+FlatLineTest(
+  tpmCountAvgGm_log2,
+  permutations = 20000,
+  plotHistogram = TRUE,
+  runs = 5,
+  parallel = FALSE,
+  custom.perm.matrix = NULL
+)
+
+
+# vst transformation------------------------------------------------------------
+
+tpmCountAvgGm_vst <- myTAI::tf(
+                     tpmCountAvgGm,
+                     FUN = vst, 
+                     integerise = TRUE)
+
+# Cullen-Frey plot for vst transformation
+FlatLineTest(
+  tpmCountAvgGm_vst,
+  permutations = 20000,
+  plotHistogram = TRUE,
+  runs = 5,
+  parallel = FALSE,
+  custom.perm.matrix = NULL
+)
+
+# perform rank transformation  -------------------------------------------------
+tpmCountAvgGm_rank <- myTAI::tf(
+                      tpmCountAvgGm,
+                      FUN = function(x) apply(x, 2, base::rank))
+                    
+
+# Cullen-Frey plot for rank transformation
+FlatLineTest(
+  tpmCountAvgGm_rank,
+  permutations = 20000,
+  plotHistogram = TRUE,
+  runs = 5,
+  parallel = FALSE,
+  custom.perm.matrix = NULL
+)
+
+
+
+```
+
+
+## Stability of the reverse hourglass test after different data transformations
+
+Here I assess the stability of the reverse hourglass pattern to different data transformations. The reverse hourglass pattern seems to be sensitive to log2 and rlog transformations since they compress the expression values of genes that dominate seed maturation. 
+
+         none         sqrt         log2         rank      squared 
+1.661412e-08 9.001226e-03 1.000000e+00 2.386576e-35 1.478264e-03
+
+```{r stability, results='hide'}
+
+# check the stability of the reverse hourglass pattern to different data transformations
+tfStability(tpmCountAvgGm,
+            TestStatistic = "ReverseHourglassTest",
+            transforms = c("none", "sqrt", "log2", "rank", "squared"),
+            modules = list(early = 1:2, mid = 3:6, late = 7:9),
+            permutations = 50000,
+            pseudocount = 1)
+
+```
+
+
+
+## Remove n top genes
+
+Stability of the reverse hourglass test after removal of n top maturation genes.
+
+
+```{r top_genes}
+
+# extract the top variance genes across the dataset
+top_var_genes_Gm <- TopVarianceGenes(tpmCountAvgGm)
+
+# remove high variance genes
+tpm_count_high_var_genes_Gm <- tpmCountAvgGm %>% filter(!(GeneID %in% top_var_genes_Gm))
+
+
+
+# get the TAI value for each sample
+TAI(tpm_count_high_var_genes_Gm)
+
+
+# Visualize the TAI profile along with the reverse hourglass test
+PlotSignature( ExpressionSet = tpm_count_high_var_genes_Gm, 
+               p.value       = TRUE, permutations = 50000, TestStatistic = "ReverseHourglassTest",
+               modules = list(early = 1:2, mid = 3:6, late = 7:9),
+               ylab = "Transcriptome age index (TAI)\n",
+               xlab = "\nOntogeny") +
+              theme_bw()+
+              theme(
+                legend.position = "none",
+                strip.text = element_text(size = 14),
+                axis.text.x = element_text(size = 14, angle = 45, hjust=1, color = "black"), 
+                axis.text.y = element_text(size = 14, color = "black"),
+                axis.title.x = element_text(size = 16), # set x-axis label size
+                axis.title.y = element_text(size = 16), # set y-axis label size
+                legend.text = element_text(size = 14),
+                legend.title = element_text(size = 16),
+                panel.grid.major = element_blank(), 
+                panel.grid.minor = element_blank()
+              )
+
+
+```
+
+
